@@ -22,20 +22,22 @@ func init() {
 }
 
 // Filter the tasks on the basis of time
-func handleTask(task Task) error {
+func handleTask(task Task, newTask bool) error {
 
 	printDetails(task)
 
-	data, err := getBSON(task)
-	if err != nil {
-		log.Println("ERROR:", err)
-		return err
-	}
+	if newTask {
+		data, err := getBSON(task)
+		if err != nil {
+			log.Println("ERROR:", err)
+			return err
+		}
 
-	err = addNewTasksEntity(data)
-	if err != nil {
-		log.Println("ERROR:", err)
-		return err
+		err = addNewTasksEntity(data)
+		if err != nil {
+			log.Println("ERROR:", err)
+			return err
+		}
 	}
 
 	if time.Since(task.ScheduleAt).Seconds() < 0 {
@@ -54,7 +56,9 @@ func runTask(task Task) error {
 	done := make(chan bool)
 	log.Println("Total processes:", len(task.Processes))
 	for i := range task.Processes {
+
 		go callProcess(task.Processes[i], done)
+
 	}
 
 	for i := 0; i < len(task.Processes); i++ {
@@ -69,6 +73,14 @@ func runTask(task Task) error {
 
 // Runs a process on a different thread while mainting status with a channel
 func callProcess(process Process, done chan<- bool) {
+
+	// Checks if task has already been marked as completed or not
+	if process.Status == StatusCompleted {
+		log.Println(process.Name, "Process already marked as done")
+		done <- true
+		return
+	}
+
 	log.Println(process.Name, "Started")
 	time.Sleep(time.Second * time.Duration(process.WorkDone))
 	log.Println(process.Name, "Completed")
@@ -99,11 +111,16 @@ func resumePendingTasks() error {
 	}
 
 	for i := range tasks {
-		go handleTask(tasks[i])
+		go handleTask(tasks[i], false)
 	}
 	return nil
 }
 func getBSON(task Task) (bson.M, error) {
+
+	for j := range task.Processes {
+		task.Processes[j].Status = StatusPending
+		task.Status = StatusPending
+	}
 
 	jsonData, err := json.Marshal(task)
 	if err != nil {
@@ -112,7 +129,7 @@ func getBSON(task Task) (bson.M, error) {
 	}
 
 	var data bson.M
-	err = bson.Unmarshal(jsonData, &data)
+	err = bson.UnmarshalJSON(jsonData, &data)
 	if err != nil {
 		log.Println("ERROR:", err)
 	}

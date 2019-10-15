@@ -11,6 +11,7 @@ import (
 // Writes details about new task and all its child components
 func addNewTasksEntity(data bson.M) error {
 
+	log.Println("adding new task", data)
 	session, err := mgo.Dial(base.MONGO_BASE_URL)
 	if err != nil {
 		log.Println("ERROR:", err)
@@ -30,6 +31,7 @@ func addNewTasksEntity(data bson.M) error {
 // Updates the details and status of the child processes
 func updateProcessStatusEntity(name, status string) error {
 
+	log.Println("Updating process status", name, status)
 	session, err := mgo.Dial(base.MONGO_BASE_URL)
 	if err != nil {
 		log.Println("ERROR:", err)
@@ -46,7 +48,9 @@ func updateProcessStatusEntity(name, status string) error {
 		},
 	}
 	update := bson.M{
-		"processes.$.status": status,
+		"$set": bson.M{
+			"processes.$.status": status,
+		},
 	}
 	err = c.Update(query, update)
 	if err != nil {
@@ -58,6 +62,8 @@ func updateProcessStatusEntity(name, status string) error {
 
 // Updates the task status as soon as child processes are completed
 func updateTaskStatusEntity(name, status string) error {
+
+	log.Println("updating task status", name, status)
 
 	session, err := mgo.Dial(base.MONGO_BASE_URL)
 	if err != nil {
@@ -71,7 +77,9 @@ func updateTaskStatusEntity(name, status string) error {
 		"name": name,
 	}
 	update := bson.M{
-		"status": status,
+		"$set": bson.M{
+			"status": status,
+		},
 	}
 	err = c.Update(query, update)
 	if err != nil {
@@ -83,6 +91,8 @@ func updateTaskStatusEntity(name, status string) error {
 
 // Read all pending tasks and their corresponding child processes
 func readTaskDetailsEntity() ([]Task, error) {
+
+	log.Println("reading task details")
 
 	session, err := mgo.Dial(base.MONGO_BASE_URL)
 	if err != nil {
@@ -101,6 +111,7 @@ func readTaskDetailsEntity() ([]Task, error) {
 	if err != nil {
 		log.Println("ERROR:", err)
 	}
+	log.Println("Tasks remaining:", len(tasks))
 
 	return tasks, err
 }

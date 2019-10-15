@@ -46,7 +46,7 @@ func scheduleTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("%+v", request)
-	if err := scheduler.HandleTask(request.Task); err != nil {
+	if err := scheduler.HandleTask(request.Task, true); err != nil {
 		log.Println("ERROR:", err)
 		returnResponse(response, http.StatusInternalServerError, w)
 		return
